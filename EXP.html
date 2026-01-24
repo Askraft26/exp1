@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AR déclenche VR - FBX</title>
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <!-- Loader FBX via three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.125.2/examples/js/loaders/FBXLoader.js"></script>
+</head>
+
+<body style="margin:0; overflow:hidden; background:#111;">
+  <a-scene embedded
+           arjs="sourceType: webcam; trackingMethod: best; detectionMode: mono_and_matrix; debugUIEnabled: false;"
+           renderer="antialias: true;">
+    
+    <!-- Marqueur Hiro -->
+    <a-marker preset="hiro">
+      <a-entity id="fbxModelAR" position="0 0 -3" scale="0.01 0.01 0.01"></a-entity>
+    </a-marker>
+
+    <!-- Contenu VR statique (sera visible en mode VR) -->
+    <a-entity id="fbxModelVR" position="0 0 -3" scale="0.01 0.01 0.01" visible="false"></a-entity>
+
+    <!-- Caméra -->
+    <a-entity camera look-controls wasd-controls position="0 1.6 0"></a-entity>
+  </a-scene>
+
+  <script>
+    const marker = document.querySelector("a-marker");
+    const vrModel = document.querySelector("#fbxModelVR");
+
+    // Cache le bouton VR au départ
+    const vrButton = document.querySelector(".a-enter-vr-button");
+    if (vrButton) vrButton.style.display = "none";
+
+    marker.addEventListener("markerFound", () => {
+      // Affiche le bouton VR seulement après détection du marker
+      if (vrButton) vrButton.style.display = "block";
+      // Active le modèle VR
+      vrModel.setAttribute("visible", "true");
+    });
+
+    // Chargement du FBX via Three.js
+    const fbxLoader = new THREE.FBXLoader();
+
+    // Version AR
+    fbxLoader.load("modele.fbx", function(object) {
+      object.scale.set(0.01, 0.01, 0.01);
+      object.position.set(0, 0, -3);
+      document.querySelector("#fbxModelAR").object3D.add(object.clone());
+    });
+
+    // Version VR
+    fbxLoader.load("modele.fbx", function(object) {
+      object.scale.set(0.01, 0.01, 0.01);
+      object.position.set(0, 0, -3);
+      vrModel.object3D.add(object);
+    });
+  </script>
+</body>
+</html>
