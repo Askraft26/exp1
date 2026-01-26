@@ -1,48 +1,99 @@
+<!doctype html>
 <html>
   <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ar.js@3.4.0/aframe/build/aframe-ar.js"></script>
+    <title>AR Video Play/Pause</title>
   </head>
   <body style="margin:0; overflow:hidden;">
+    <!-- Vidéo HTML native (référence pour a-video) -->
+    <video id="brVideo"
+           src="br.mp4"
+           crossorigin="anonymous"
+           playsinline
+           webkit-playsinline
+           preload="auto"
+           style="display:none"></video>
+
     <a-scene embedded arjs>
       <!-- Marqueur AR -->
       <a-marker preset="hiro">
-        <!-- Vidéo affichée en AR -->
+        <!-- a-video référence la balise <video> via #brVideo -->
         <a-video id="myVideo"
-                 src="br.mp4"
+                 src="#brVideo"
                  width="2" height="1.5"
-                 autoplay="false" loop="true">
+                 position="0 0 0"
+                 rotation="0 0 0"
+                 loop="true"
+                 autoplay="false">
         </a-video>
 
-        <!-- Bouton Play/Pause -->
+        <!-- Bouton Play/Pause (cliquable) -->
         <a-box id="playButton"
                position="0 -1 0"
-               depth="0.2" height="0.3" width="0.6"
-               color="blue">
+               depth="0.05" height="0.25" width="0.8"
+               color="#1565C0">
         </a-box>
-        <a-text value="Play/Pause"
-                position="0 -1 0.3"
+        <a-text id="btnLabel"
+                value="Play"
+                position="0 -1 0.06"
                 align="center"
-                color="white">
+                color="#FFFFFF"
+                width="1.6">
         </a-text>
       </a-marker>
 
-      <!-- Caméra -->
-      <a-entity camera></a-entity>
+      <!-- Caméra + cursor pour capter les clics (souris / VR ray) -->
+      <a-entity camera>
+        <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-entity>
+      </a-entity>
     </a-scene>
 
     <script>
-      // Gestion du bouton Play/Pause
       document.addEventListener('DOMContentLoaded', () => {
-        const videoEl = document.querySelector('#myVideo');
-        const buttonEl = document.querySelector('#playButton');
+        const htmlVideo = document.querySelector('#brVideo'); // élément <video> natif
+        const aVideo = document.querySelector('#myVideo');    // entité A-Frame
+        const button = document.querySelector('#playButton');
+        const label = document.querySelector('#btnLabel');
 
-        buttonEl.addEventListener('click', () => {
-          const video = videoEl.components.material.material.map.image;
-          if (video.paused) {
-            video.play();
-          } else {
-            video.pause();
+        // Rendre le bouton cliquable par le raycaster
+        button.classList.add('clickable');
+
+        // Défaut : s'assurer que la vidéo est en pause et muette si nécessaire
+        htmlVideo.pause();
+        // htmlVideo.muted = true; // décommente si tu veux autoriser autoplay sur certains mobiles
+
+        // Gestion du clic sur le bouton
+        button.addEventListener('click', async () => {
+          try {
+            if (htmlVideo.paused) {
+              await htmlVideo.play(); // play() retourne une Promise
+              label.setAttribute('value', 'Pause');
+            } else {
+              htmlVideo.pause();
+              label.setAttribute('value', 'Play');
+            }
+          } catch (err) {
+            console.warn('Impossible de lancer la vidéo automatiquement :', err);
+            // Sur mobile, la lecture peut être bloquée sans interaction utilisateur explicite
+          }
+        });
+
+        // Optionnel : cliquer directement sur la vidéo pour play/pause
+        aVideo.classList.add('clickable');
+        aVideo.addEventListener('click', async () => {
+          try {
+            if (htmlVideo.paused) {
+              await htmlVideo.play();
+              label.setAttribute('value', 'Pause');
+            } else {
+              htmlVideo.pause();
+              label.setAttribute('value', 'Play');
+            }
+          } catch (err) {
+            console.warn('Erreur lecture vidéo:', err);
           }
         });
       });
