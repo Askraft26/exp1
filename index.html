@@ -1,55 +1,83 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>AR GLB avec contrôles</title>
+    <title>AR GLB Optimisé avec Contrôles</title>
     <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <!-- AR.js -->
-    <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/2.2.1/aframe/build/aframe-ar.js"></script>
+    <!-- AR.js version stable -->
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
     <script>
-      // Composant personnalisé pour rotation/zoom
+      // Composant pour rotation/zoom universel
       AFRAME.registerComponent('gesture-handler', {
         schema: {
-          rotationFactor: {default: 5},
+          rotationFactor: {default: 0.01},
           scaleFactor: {default: 0.05}
         },
         init: function () {
-          this.handleRotation = this.handleRotation.bind(this);
-          this.handleScale = this.handleScale.bind(this);
-          this.el.addEventListener('mousedown', this.handleRotation);
-          this.el.addEventListener('wheel', this.handleScale);
-          this.el.addEventListener('touchmove', this.handleTouch.bind(this));
-        },
-        handleRotation: function (evt) {
-          this.el.object3D.rotation.y += this.data.rotationFactor * 0.01;
-        },
-        handleScale: function (evt) {
-          evt.preventDefault();
-          let scale = this.el.object3D.scale;
-          let factor = 1 + (evt.deltaY < 0 ? this.data.scaleFactor : -this.data.scaleFactor);
-          this.el.object3D.scale.set(scale.x * factor, scale.y * factor, scale.z * factor);
-        },
-        handleTouch: function (evt) {
-          if (evt.touches.length === 2) {
-            let dx = evt.touches[0].clientX - evt.touches[1].clientX;
-            let dy = evt.touches[0].clientY - evt.touches[1].clientY;
-            let distance = Math.sqrt(dx * dx + dy * dy);
-            if (!this.lastDistance) this.lastDistance = distance;
-            let factor = 1 + (distance > this.lastDistance ? this.data.scaleFactor : -this.data.scaleFactor);
+          this.isDragging = false;
+          this.lastX = 0;
+          this.lastDistance = null;
+
+          // Souris
+          this.el.sceneEl.canvas.addEventListener('mousedown', e => {
+            this.isDragging = true;
+            this.lastX = e.clientX;
+          });
+          this.el.sceneEl.canvas.addEventListener('mouseup', () => {
+            this.isDragging = false;
+          });
+          this.el.sceneEl.canvas.addEventListener('mousemove', e => {
+            if (this.isDragging) {
+              let deltaX = e.clientX - this.lastX;
+              this.el.object3D.rotation.y += deltaX * this.data.rotationFactor;
+              this.lastX = e.clientX;
+            }
+          });
+          this.el.sceneEl.canvas.addEventListener('wheel', e => {
+            e.preventDefault();
             let scale = this.el.object3D.scale;
+            let factor = 1 + (e.deltaY < 0 ? this.data.scaleFactor : -this.data.scaleFactor);
             this.el.object3D.scale.set(scale.x * factor, scale.y * factor, scale.z * factor);
-            this.lastDistance = distance;
-          }
+          });
+
+          // Mobile (touch)
+          this.el.sceneEl.canvas.addEventListener('touchmove', e => {
+            if (e.touches.length === 1) {
+              // Rotation avec un doigt
+              if (this.lastX) {
+                let deltaX = e.touches[0].clientX - this.lastX;
+                this.el.object3D.rotation.y += deltaX * this.data.rotationFactor;
+              }
+              this.lastX = e.touches[0].clientX;
+            } else if (e.touches.length === 2) {
+              // Pinch zoom
+              let dx = e.touches[0].clientX - e.touches[1].clientX;
+              let dy = e.touches[0].clientY - e.touches[1].clientY;
+              let distance = Math.sqrt(dx * dx + dy * dy);
+              if (this.lastDistance) {
+                let factor = 1 + (distance > this.lastDistance ? this.data.scaleFactor : -this.data.scaleFactor);
+                let scale = this.el.object3D.scale;
+                this.el.object3D.scale.set(scale.x * factor, scale.y * factor, scale.z * factor);
+              }
+              this.lastDistance = distance;
+            }
+          });
         }
       });
     </script>
   </head>
   <body style="margin:0; overflow:hidden;">
-    <a-scene embedded arjs="sourceType: webcam; facingMode: environment;">
+    <a-scene embedded 
+             arjs="sourceType: webcam; facingMode: environment;" 
+             vr-mode-ui="enabled: false" 
+             device-orientation-permission-ui="enabled: true">
       <!-- Marqueur AR -->
       <a-marker preset="hiro">
         <!-- Ton modèle GLB avec contrôles -->
-        <a-entity gltf-model="free_fire_new_gojo_3d_model.glb" scale="0.5 0.5 0.5" gesture-handler></a-entity>
+        <a-entity gltf-model="free_fire_new_gojo_3d_model.glb" 
+                  scale="0.5 0.5 0.5" 
+                  gesture-handler>
+        </a-entity>
       </a-marker>
       <a-entity camera></a-entity>
     </a-scene>
