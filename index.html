@@ -1,18 +1,55 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Démo AR avec GLB</title>
+    <title>AR GLB avec contrôles</title>
     <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <!-- AR.js pour A-Frame -->
+    <!-- AR.js -->
     <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/2.2.1/aframe/build/aframe-ar.js"></script>
+    <script>
+      // Composant personnalisé pour rotation/zoom
+      AFRAME.registerComponent('gesture-handler', {
+        schema: {
+          rotationFactor: {default: 5},
+          scaleFactor: {default: 0.05}
+        },
+        init: function () {
+          this.handleRotation = this.handleRotation.bind(this);
+          this.handleScale = this.handleScale.bind(this);
+          this.el.addEventListener('mousedown', this.handleRotation);
+          this.el.addEventListener('wheel', this.handleScale);
+          this.el.addEventListener('touchmove', this.handleTouch.bind(this));
+        },
+        handleRotation: function (evt) {
+          this.el.object3D.rotation.y += this.data.rotationFactor * 0.01;
+        },
+        handleScale: function (evt) {
+          evt.preventDefault();
+          let scale = this.el.object3D.scale;
+          let factor = 1 + (evt.deltaY < 0 ? this.data.scaleFactor : -this.data.scaleFactor);
+          this.el.object3D.scale.set(scale.x * factor, scale.y * factor, scale.z * factor);
+        },
+        handleTouch: function (evt) {
+          if (evt.touches.length === 2) {
+            let dx = evt.touches[0].clientX - evt.touches[1].clientX;
+            let dy = evt.touches[0].clientY - evt.touches[1].clientY;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            if (!this.lastDistance) this.lastDistance = distance;
+            let factor = 1 + (distance > this.lastDistance ? this.data.scaleFactor : -this.data.scaleFactor);
+            let scale = this.el.object3D.scale;
+            this.el.object3D.scale.set(scale.x * factor, scale.y * factor, scale.z * factor);
+            this.lastDistance = distance;
+          }
+        }
+      });
+    </script>
   </head>
   <body style="margin:0; overflow:hidden;">
-    <a-scene embedded arjs>
-      <!-- Marqueur AR (par défaut : "hiro") -->
+    <a-scene embedded arjs="sourceType: webcam; facingMode: environment;">
+      <!-- Marqueur AR -->
       <a-marker preset="hiro">
-        <!-- Charger ton modèle GLB -->
-        <a-entity gltf-model="free_fire_new_gojo_3d_model.glb" scale="0.5 0.5 0.5"></a-entity>
+        <!-- Ton modèle GLB avec contrôles -->
+        <a-entity gltf-model="free_fire_new_gojo_3d_model.glb" scale="0.5 0.5 0.5" gesture-handler></a-entity>
       </a-marker>
       <a-entity camera></a-entity>
     </a-scene>
